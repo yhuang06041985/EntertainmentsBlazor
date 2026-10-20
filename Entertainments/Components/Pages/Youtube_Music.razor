@@ -1,0 +1,111 @@
+﻿@page "/youtube_music"
+@rendermode InteractiveServer
+@using Entertainments.Models
+@using Entertainments.Services
+@inject YouTubeService YouTubeService
+
+<h3>YouTube Music Search</h3>
+
+<div class="row mb-3">
+    <div class="col-4">
+        <input class="form-control"
+               placeholder="Enter song name"
+               @bind="songName"
+               @bind:event="oninput"
+               @onkeydown="HandleKeyDown" />
+    </div>
+
+    <div class="col-2">
+        <button class="btn btn-primary"
+                @onclick="SearchSongs"
+                disabled="@isLoading">
+            Search
+        </button>
+    </div>
+</div>
+
+@if (isLoading)
+{
+    <p>Searching...</p>
+}
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <p class="text-danger">@errorMessage</p>
+}
+
+@foreach (var song in songs)
+{
+    <div class="mb-2">
+        <span>@song.Snippet.Title</span>
+
+        <button class="btn btn-success btn-sm ms-2"
+                @onclick="() => PlaySong(song)">
+            Play
+        </button>
+    </div>
+}
+
+@if (selectedSong != null)
+{
+    <hr />
+    <h4>Now Playing</h4>
+    <p>@selectedSong.Snippet.Title</p>
+
+    <iframe width="560"
+            height="315"
+            src="@videoUrl"
+            title="YouTube video player"
+            allow="autoplay; encrypted-media"
+            allowfullscreen>
+    </iframe>
+}
+
+@code {
+    private string songName = string.Empty;
+    private List<YouTubeVideo> songs = new();
+    private YouTubeVideo? selectedSong;
+    private string videoUrl = string.Empty;
+    private string errorMessage = string.Empty;
+    private bool isLoading = false;
+
+    private async Task SearchSongs()
+    {
+        if (string.IsNullOrWhiteSpace(songName))
+            return;
+
+        isLoading = true;
+        errorMessage = string.Empty;
+        selectedSong = null;
+        videoUrl = string.Empty;
+        songs.Clear();
+
+        try
+        {
+            songs = await YouTubeService.SearchVideoAsync(songName);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void PlaySong(YouTubeVideo song)
+    {
+        selectedSong = song;
+
+        videoUrl =
+            $"https://www.youtube.com/embed/{song.Id.VideoId}?autoplay=1";
+    }
+
+    private async Task HandleKeyDown(
+        KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+            await SearchSongs();
+    }
+}

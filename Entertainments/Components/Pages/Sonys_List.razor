@@ -1,0 +1,168 @@
+﻿@page "/Songs_List"
+@rendermode InteractiveServer
+@inject SongRepostitory songRepostitory
+@inject JamendoService JamendoService
+@inject IJSRuntime JS
+@inject IWebHostEnvironment Environment
+@inject NavigationManager Navigation
+
+<div class="row">
+    <div class="col-7">
+        <h3 class="text-center" style="wight:200px; height:50px; border: 2px;"> List of Songs</h3>
+    </div>
+    <div class="col-5 "><h4 class="text-right text-danger">@updateStatus </h4></div>
+</div>
+
+<div class="row">
+    <label>
+        <input type="checkbox"
+               @onchange="downloadAllChanges" />
+        Download all songs
+    </label>
+</div><hr />
+
+
+@if (IsLoad)
+{
+
+    <div class="table table-striped border-1">
+        @foreach (var song in songs)
+        {
+            <div class="row" style="line-height:1.5;" @key="song">
+                <div class="col-4" @onclick="() => PlaySong(song)">
+
+                    ▶ &nbsp;&nbsp; @song.Name
+                </div>
+                <div class="col-3">
+                    @song.Artist &nbsp;&nbsp;
+                    <button class="more-button"
+                    @onclick="() => DeleteSong(song)"
+                    title="More options">
+                        ...
+                    </button>
+                </div>
+                @if (!string.IsNullOrEmpty(currentSongUrl)  
+                        && currentSongName == song.Name 
+                        && currentArtist == song.Artist)
+                   {
+                    <div class="col-5">
+                        <p>Now playing: @currentSongName — @currentArtist</p>
+
+                        <audio controls autoplay @key="currentSongUrl"
+                               @onended="PlayNextSong">
+                            <source src="@currentSongUrl" type="audio/mpeg" />
+                        </audio>
+
+                    </div>
+                }
+            </div>
+        }
+    </div>
+}
+else
+{
+    <p class="text-center text-bg-info">Loading.....</p>
+}
+
+    
+@code {
+    private List<Song> songs = new();
+    private bool IsLoad;
+    private Song? menuSong;
+    private string updateStatus = string.Empty;
+
+    private string currentSongUrl = string.Empty;
+    private string currentSongName = string.Empty;
+    private string currentArtist = string.Empty;
+    private bool isDeleting;
+    private bool downloadAllSongs;
+    private int currentSongIndex = -1;
+
+    private void PlaySong(Song song)
+    {
+        currentSongIndex = songs.IndexOf(song);
+        currentSongUrl = song.FilePath;
+        currentSongName = song.Name;
+        currentArtist = song.Artist;
+    }
+
+    private void PlayNextSong()
+    {
+        if (songs.Count == 0)
+            return;
+
+        currentSongIndex = (currentSongIndex + 1) % songs.Count;
+        PlaySong(songs[currentSongIndex]);
+    }
+
+    private async Task DeleteSong(Song song)
+    {
+        if (isDeleting)
+            return;
+
+        isDeleting = true;
+
+        try
+        {
+            bool confirmed = await JS.InvokeAsync<bool>(
+                "confirm",
+                $"Permanently delete '{song.Name}'?");
+
+            if (!confirmed)
+                return;
+
+            await JamendoService.DeleteSongAsync(song);
+
+            updateStatus = $"'{song.Name}' was deleted.";
+            ClearUpdateStatusAsync();
+
+            songs.Remove(song);
+
+        }
+        catch (Exception ex)
+        {
+            updateStatus = $"Delete failed: {ex.Message}";
+        }
+        finally
+        {
+            isDeleting = false;
+        }
+    }
+
+    private async Task ClearUpdateStatusAsync()
+    {
+        await Task.Delay(5000); // 10 seconds
+
+        updateStatus = string.Empty;
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSongsAsync();
+    }
+
+    private async Task LoadSongsAsync()
+    {
+        if (songs.Count == 0)
+        {
+            IsLoad = false;
+            await InvokeAsync(StateHasChanged); // Show Loading message first
+
+            songs = await songRepostitory.GetSongsAsync();
+
+            IsLoad = true;
+        }
+    }
+    
+
+    private void downloadAllChanges(ChangeEventArgs e)
+    {
+        if (e.Value is bool isChecked && isChecked)
+        {
+            Navigation.NavigateTo("/download-songs",
+                forceLoad: true);
+        }
+    }
+}

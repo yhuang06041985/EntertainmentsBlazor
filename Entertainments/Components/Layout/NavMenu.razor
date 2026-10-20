@@ -1,0 +1,48 @@
+﻿<div class="top-row ps-3 navbar navbar-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="">Entertainments</a>
+    </div>
+</div>
+
+<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+
+<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
+    <nav class="nav flex-column">
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
+            </NavLink>
+        </div>
+        @*@<div class="nav-item px-2">
+            <NavLink class="nav-link" href="youtube_music">
+                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Song from Youtube
+            </NavLink>
+        </div>*@
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="music">
+                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Search Song  @*from Jamento*@
+            </NavLink>
+        </div>
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="Songs_List">
+                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> List of Songs
+            </NavLink>
+        </div>
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="MovieTvSearch">
+                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Search Movie & TV
+            </NavLink>
+        </div>
+
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="MovieTv_List">
+                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> List of Movie & TV
+            </NavLink>
+        </div>
+    </nav>
+</div>
+

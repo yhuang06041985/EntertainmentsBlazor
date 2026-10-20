@@ -1,0 +1,120 @@
+﻿@page "/Music"
+@rendermode InteractiveServer
+@inject IJSRuntime JS
+
+@using Entertainments.Models
+@using Entertainments.Services
+@inject JamendoService JamendoService
+
+
+<div class="row">
+    <div class="col-7">
+        <h3 class="text-center" style="wight:200px; height:50px; border: 2px;"> Searh Songs </h3><hr />
+    </div>
+    <div class="col-5 "><h4 class="text-right text-danger">@updateStatus </h4></div>
+</div> <br />
+
+
+<div class="row mb-3">
+    <div class="col-4">
+        <input class="form-control"
+               placeholder="Search songs"
+               @bind="songName" autofocus />
+    </div>
+
+    <div class="col-2">
+        <button class="btn btn-primary"
+                @onclick="Search">
+            Search
+        </button>
+    </div>
+</div>
+
+@foreach (var song in songs)
+{
+     <div class="row mb-2">
+         <div class="col-5 text-align-left" >
+             <span>@song.Name - @song.ArtistName</span>
+        </div>
+        <div class="col-3 text-align-right">
+        <button class="btn btn-success btn-sm"
+                @onclick="() => PlaySong(song)">
+            Play
+        </button>&nbsp;&nbsp;
+            <button class="btn btn-primary btn-sm"
+                    @onclick="() => DownloadSong(song)"
+                    disabled="@(!song.DownloadAllowed)">
+                Download
+            </button>
+        </div>
+     </div>
+}
+
+@if (selectedSong != null)
+{
+    <h4>Now Playing: @selectedSong.Name</h4>
+
+    <audio controls autoplay
+           @key="audioUrl"
+           src="@audioUrl">
+    </audio>
+}
+
+@if (!string.IsNullOrEmpty(message))
+{
+    <p>@message</p>
+}
+
+@code {
+    private string songName = string.Empty;
+    private List<JamendoSong> songs = new();
+
+    private JamendoSong? selectedSong;
+    private string audioUrl = string.Empty;
+    private string message = string.Empty;
+    private string updateStatus;
+
+    private async Task Search()
+    {
+        message = string.Empty;
+        songs = await JamendoService.SearchSongsAsync(songName);
+                //.Where(song => song.DownloadAllowed)
+                   // .ToList();
+        songName = string.Empty;
+    }
+
+    private void PlaySong(JamendoSong song)
+    {
+        selectedSong = song;
+        audioUrl = song.Audio;
+    }
+
+    private async Task DownloadSong(JamendoSong song)
+    {
+        try
+        {
+            string localUrl =
+                await JamendoService.DownloadSongAsync(song);
+
+            updateStatus = $"you just download song: {song.Name}";
+            ClearUpdateStatusAsync();
+        }
+            //JS.InvokeVoidAsync("alert", $"you just download song: {song.Name}");
+
+        
+        catch (Exception ex)
+        {
+            message = ex.Message;
+        }
+    }
+
+    private async Task ClearUpdateStatusAsync()
+    {
+        await Task.Delay(5000); // 10 seconds
+
+        updateStatus = string.Empty;
+
+        await InvokeAsync(StateHasChanged);
+    }
+  }
+   

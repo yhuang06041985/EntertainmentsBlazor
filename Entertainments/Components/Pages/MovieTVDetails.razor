@@ -1,0 +1,104 @@
+﻿@page "/movietvdetails/{MediaType}/{Id:int}"
+@using System.Net.Http
+@using Entertainments.Models
+@using Entertainments.Services
+@inject MovieTvService MovieTv
+
+<PageTitle>MovieTV Details</PageTitle>
+
+@if (loading)
+{
+    <p>Loading details...</p>
+}
+else if (!string.IsNullOrEmpty(errorMessage))
+{
+    <p class="text-danger">@errorMessage</p>
+}
+else if (media is not null)
+{
+    <h1>@(media.Title ?? media.Name)</h1>
+
+    @if (!string.IsNullOrEmpty(media.PosterPath))
+    {
+        <img src="@($"https://image.tmdb.org/t/p/w500{media.PosterPath}")"
+             alt="@(media.Title ?? media.Name)"
+             style="max-width: 250px; height: auto;" />
+    }
+
+    <p><strong>Rating:</strong> @media.VoteAverage.ToString("0.0") / 10</p>
+
+    <p>
+        <strong>Release date:</strong>
+        @(media.ReleaseDate ?? media.FirstAirDate ?? "Unknown")
+    </p>
+
+    <p>@media.Overview</p>
+
+    <h3>Free Viewing Options</h3>
+
+    @if (providers?.Free?.Count > 0 || providers?.Ads?.Count > 0)
+    {
+        @if (!string.IsNullOrWhiteSpace(providerLink))
+        {
+            <p>
+                <a href="@providerLink" target="_blank"
+                   rel="noopener noreferrer">
+                    View free streaming options
+                </a>
+            </p>
+        }
+
+        @foreach (var provider in
+            (providers.Free ?? []).Concat(providers.Ads ?? [])
+                .DistinctBy(p => p.ProviderName))
+        {
+            <p>@provider.ProviderName</p>
+        }
+    }
+    else
+    {
+        <p>No free providers are listed for this title in the US.</p>
+    }
+}
+
+@code {
+    [Parameter]
+    public string MediaType { get; set; } = "movie";
+
+    [Parameter]
+    public int Id { get; set; }
+
+    private MediaDetails? media;
+    private bool loading = true;
+    private string errorMessage = "";
+    private WatchProviderRegion? providers;
+    private string? providerLink;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        loading = true;
+        errorMessage = "";
+        media = null;
+        providers = null;
+        providerLink = null;
+
+        try
+        {
+            media = await MovieTv.GetMediaDetailsAsync(MediaType, Id);
+
+            var providerResponse =
+                await MovieTv.GetWatchProvidersAsync(MediaType, Id);
+
+            providerResponse.Results.TryGetValue("US", out providers);
+            providerLink = providers?.Link;
+        }
+        catch (HttpRequestException)
+        {
+            errorMessage = "Unable to load details from TMDB.";
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+}

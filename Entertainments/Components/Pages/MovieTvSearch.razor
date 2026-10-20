@@ -1,0 +1,132 @@
+﻿@page "/movietvsearch"
+@rendermode InteractiveServer
+@inject MovieTvService MovieTv
+
+<PageTitle>MovieTV Search</PageTitle>
+
+<h1>Movie & TV Search</h1>
+
+<p>Search for movies and TV series using TMDB.</p>
+
+
+<div class="row">
+    <div class="col-3">
+        <input @bind="searchQuery" style="width: 280px; height:40px;"
+       @bind:event="oninput"
+       placeholder="Enter a movie or TV show title" />
+
+    </div>
+    <div class="col-6">
+        <button @onclick="SearchMovies" class="btn btn-primary">Search Movies</button>&nbsp;
+        <button @onclick="SearchTvShows" class="btn btn-primary">Search TV Shows</button>
+    </div>
+    
+</div>
+
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <p class="text-danger">@errorMessage</p>
+}
+
+@if (movies.Count > 0)
+{
+    <h3>Search Results</h3>
+
+    @foreach (var movie in movies)
+    {
+        <div class="card mb-3 p-3">
+           <h4>
+                <a href="@($"/movietvdetails/movie/{movie.Id}")">
+                @movie.Title
+                </a>
+            </h4>
+            <p>Rating: @movie.VoteAverage.ToString("0.0") / 10</p>
+            <p>Release Date: @movie.ReleaseDate</p>
+            <p>@movie.Overview</p>
+        </div>
+    }
+}
+
+@foreach (var show in tvShows)
+{
+    <div class="card mb-3 p-3">
+        <div class="d-flex gap-3">
+            @if (!string.IsNullOrEmpty(show.PosterPath))
+            {
+                <img src="@($"https://image.tmdb.org/t/p/w342{show.PosterPath}")"
+                     alt="@show.Name"
+                     style="width: 140px; height: auto; object-fit: cover;" />
+            }
+
+            <div>
+                <h4>
+                    <a href="@($"/movietvdetails/tv/{show.Id}")">
+                        @show.Name
+                    </a>
+                </h4>
+
+                <p>Rating: @show.VoteAverage.ToString("0.0") / 10</p>
+                <p>First Air Date: @show.FirstAirDate</p>
+                <p>@show.Overview</p>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private string searchQuery = "";
+    private List<Movie> movies = [];
+    private List<TvShow> tvShows = [];
+    private string errorMessage = "";
+
+    private async Task SearchMovies()
+    {
+        await SearchAsync(true);
+    }
+
+    private async Task SearchTvShows()
+    {
+        await SearchAsync(false);
+    }
+
+   
+    private async Task SearchAsync(bool isMovie)
+    {
+        if (string.IsNullOrWhiteSpace(searchQuery))
+        {
+            errorMessage = "Please enter a title to search.";
+            movies = [];
+            tvShows = [];
+            return;
+        }
+
+        try
+        {
+            errorMessage = "";
+            movies = [];
+            tvShows = [];
+
+            if (isMovie)
+            {
+                var response =
+                    await MovieTv.SearchMoviesAsync(searchQuery);
+
+                movies = response.Results;
+            }
+            else
+            {
+                var response =
+                    await MovieTv.SearchTvShowsAsync(searchQuery);
+
+                tvShows = response.Results;
+            }
+        }
+        catch (HttpRequestException ex)
+        {
+            errorMessage = $"TMDB request failed: {ex.Message}";
+        }
+    }
+
+
+}
